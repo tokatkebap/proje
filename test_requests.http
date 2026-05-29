@@ -1,0 +1,204 @@
+### Çiğköfte Restoran API Sistemi - Canlı Test Senaryoları
+# Bu dosyayı VS Code REST Client eklentisiyle doğrudan tıklayarak çalıştırabilirsiniz.
+# Veya yanlarında verilen CURL komutlarını terminalde çalıştırarak test edebilirsiniz.
+
+@baseUrl = http://localhost:8000
+@adminToken = admin-token
+@kasiyerToken = kasiyer-token
+
+### -------------------------------------------------------------
+### 1. API ANA SAYFA (BAĞLANTI TESTİ)
+### CURL: curl -X GET http://localhost:8000/
+### -------------------------------------------------------------
+GET {{baseUrl}}/
+Content-Type: application/json
+
+
+### -------------------------------------------------------------
+### 2. PERSONEL GİRİŞİ (KASİYER OLARAK GİRİŞ)
+### CURL: curl -X POST http://localhost:8000/api/staff/login -d "{\"username\":\"kasiyer\",\"password\":\"kasiyer123\"}"
+### -------------------------------------------------------------
+# POST {{baseUrl}}/api/staff/login
+# Burası gerçek şifre testi yapar. Geriye "token" olarak kullanıcı ID'sini döndürür.
+POST {{baseUrl}}/api/staff/login
+Content-Type: application/json
+
+{
+  "username": "kasiyer",
+  "password": "kasiyer123"
+}
+
+
+### -------------------------------------------------------------
+### 3. PERSONEL GİRİŞİ (YÖNETİCİ/ADMIN OLARAK GİRİŞ)
+### CURL: curl -X POST http://localhost:8000/api/staff/login -d "{\"username\":\"admin\",\"password\":\"admin123\"}"
+### -------------------------------------------------------------
+POST {{baseUrl}}/api/staff/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "admin123"
+}
+
+
+### -------------------------------------------------------------
+### 4. YENİ KATEGORİ EKLEME (Admin Yetkisi Gerekir)
+### CURL: curl -X POST http://localhost:8000/api/categories -H "Authorization: Bearer admin-token" -d "{\"name\":\"Özel Kampanyalar\"}"
+### -------------------------------------------------------------
+POST {{baseUrl}}/api/categories
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Özel Kampanyalar"
+}
+
+
+### -------------------------------------------------------------
+### 5. KATEGORİLERİ LİSTELEME
+### CURL: curl -X GET http://localhost:8000/api/categories -H "Authorization: Bearer kasiyer-token"
+### -------------------------------------------------------------
+GET {{baseUrl}}/api/categories
+Authorization: Bearer {{kasiyerToken}}
+
+
+### -------------------------------------------------------------
+### 6. YENİ ÜRÜN VE BOYUTLARINI EKLEME (Admin Yetkisi)
+### Bu istek hem "Çiğköfte Dürüm" ürününü ekler hem de "Normal" ve "Mega" boyutlarını fiyatlarıyla kaydeder.
+### CURL: curl -X POST http://localhost:8000/api/products -H "Authorization: Bearer admin-token" -d "{\"name\":\"Çiğköfte Dürüm\",\"category_id\":1,\"description\":\"Taze yeşillik ve özel soslu dürüm\",\"sizes\":[{\"size_name\":\"Normal Dürüm\",\"price\":80.0},{\"size_name\":\"Mega Dürüm\",\"price\":100.0}]}"
+### -------------------------------------------------------------
+POST {{baseUrl}}/api/products
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Çiğköfte Dürüm",
+  "category_id": 1,
+  "description": "Taze yeşillik ve özel soslu nefis çiğköfte dürümü",
+  "sizes": [
+    {
+      "size_name": "Normal Dürüm",
+      "price": 80.0
+    },
+    {
+      "size_name": "Mega Dürüm",
+      "price": 100.0
+    }
+  ]
+}
+
+
+### -------------------------------------------------------------
+### 7. ÜRÜNLERİ LİSTELEME
+### CURL: curl -X GET http://localhost:8000/api/products -H "Authorization: Bearer kasiyer-token"
+### -------------------------------------------------------------
+GET {{baseUrl}}/api/products
+Authorization: Bearer {{kasiyerToken}}
+
+
+### -------------------------------------------------------------
+### 8. ENVANTER MALZEMELERİNİ LİSTELEME
+### CURL: curl -X GET http://localhost:8000/api/ingredients -H "Authorization: Bearer kasiyer-token"
+### -------------------------------------------------------------
+GET {{baseUrl}}/api/ingredients
+Authorization: Bearer {{kasiyerToken}}
+
+
+### -------------------------------------------------------------
+### 9. REÇETE TANIMLAMA (Normal Dürüm için Reçete Girişi)
+### Ürün boyutu 1 olan (Normal Dürüm) için: 1 Lavaş (id: 2), 120g Harç (id: 1), 30g Marul (id: 3), 15ml Nar Ekşisi (id: 4), 1 Dürüm Kağıdı (id: 5)
+### CURL: curl -X POST http://localhost:8000/api/recipes -H "Authorization: Bearer admin-token" -d "{\"product_size_id\":1,\"ingredients\":[{\"ingredient_id\":2,\"quantity\":1.0},{\"ingredient_id\":1,\"quantity\":120.0},{\"ingredient_id\":3,\"quantity\":30.0},{\"ingredient_id\":4,\"quantity\":15.0},{\"ingredient_id\":5,\"quantity\":1.0}]}"
+### -------------------------------------------------------------
+POST {{baseUrl}}/api/recipes
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "product_size_id": 1,
+  "ingredients": [
+    {
+      "ingredient_id": 2,
+      "quantity": 1.0
+    },
+    {
+      "ingredient_id": 1,
+      "quantity": 120.0
+    },
+    {
+      "ingredient_id": 3,
+      "quantity": 30.0
+    },
+    {
+      "ingredient_id": 4,
+      "quantity": 15.0
+    },
+    {
+      "ingredient_id": 5,
+      "quantity": 1.0
+    }
+  ]
+}
+
+
+### -------------------------------------------------------------
+### 10. REÇETELERİ LİSTELEME
+### CURL: curl -X GET http://localhost:8000/api/recipes -H "Authorization: Bearer kasiyer-token"
+### -------------------------------------------------------------
+GET {{baseUrl}}/api/recipes
+Authorization: Bearer {{kasiyerToken}}
+
+
+### -------------------------------------------------------------
+### 11. YENİ SİPARİŞ VERME VE OTOMATİK STOKTAN DÜŞME
+### Senaryo: Kasiyer, 2 adet "Normal Dürüm" (Ürün Boyutu ID: 1) siparişi alıyor. 
+### Veritabanından otomatik olarak 2 Lavaş, 240g Harç, 60g Marul vb. düşecektir.
+### CURL: curl -X POST http://localhost:8000/api/orders -H "Authorization: Bearer kasiyer-token" -d "{\"items\":[{\"product_size_id\":1,\"quantity\":2}]}"
+### -------------------------------------------------------------
+POST {{baseUrl}}/api/orders
+Authorization: Bearer {{kasiyerToken}}
+Content-Type: application/json
+
+{
+  "items": [
+    {
+      "product_size_id": 1,
+      "quantity": 2
+    }
+  ]
+}
+
+
+### -------------------------------------------------------------
+### 12. ENVANTERİ YENİDEN KONTROL ETME (Stokların Düştüğünü Görün)
+### CURL: curl -X GET http://localhost:8000/api/ingredients -H "Authorization: Bearer kasiyer-token"
+### -------------------------------------------------------------
+GET {{baseUrl}}/api/ingredients
+Authorization: Bearer {{kasiyerToken}}
+
+
+### -------------------------------------------------------------
+### 13. STOK YETERSİZLİK DURUMU TESTİ
+### 500 adet sipariş vermeye çalışıyoruz. Stok yetmeyeceği için sistem siparişi engelleyecek!
+### CURL: curl -X POST http://localhost:8000/api/orders -H "Authorization: Bearer kasiyer-token" -d "{\"items\":[{\"product_size_id\":1,\"quantity\":500}]}"
+### -------------------------------------------------------------
+POST {{baseUrl}}/api/orders
+Authorization: Bearer {{kasiyerToken}}
+Content-Type: application/json
+
+{
+  "items": [
+    {
+      "product_size_id": 1,
+      "quantity": 500
+    }
+  ]
+}
+
+
+### -------------------------------------------------------------
+### 14. DASHBOARD RAPORLARINI ÇEKME (Ciro & Satış İstatistikleri)
+### CURL: curl -X GET http://localhost:8000/api/reports -H "Authorization: Bearer admin-token"
+### -------------------------------------------------------------
+GET {{baseUrl}}/api/reports
+Authorization: Bearer {{adminToken}}
